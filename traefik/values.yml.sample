@@ -1,0 +1,86 @@
+additionalArguments: {}
+logs:
+  # Configure log settings here...
+  general:
+    level: ERROR
+
+ports:
+  # Configure your entrypoints here...
+  web:
+    hostPort: 80
+  # (optional) Permanent Redirect to HTTPS
+    redirectTo: websecure
+  websecure:
+    hostPort: 443
+    tls:
+      enabled: true
+      # (optional) Set a Default CertResolver
+      certResolver: cloudflare
+
+
+env:
+   - name: CF_API_EMAIL
+     valueFrom:
+       secretKeyRef:
+         key: email
+         name: cloudflare-credentials
+   - name: CF_API_KEY
+     valueFrom:
+       secretKeyRef:
+         key: apiKey
+         name: cloudflare-credentials
+
+# Disable Dashboard
+ingressRoute:
+  dashboard:
+    enabled: false
+
+# Persistent Storage
+persistence:
+  enabled: true
+  name: traefik-ssl-pvc
+  size: 1Gi
+  path: /ssl-certs
+
+#deployment:
+#  initContainers:
+#    # The "volume-permissions" init container is required if you run into permission issues.
+#    # Related issue: https://github.com/containous/traefik/issues/6972
+#    - name: volume-permissions
+#      image: busybox:1.31.1
+#      command: ["sh", "-c", "chmod -Rv 600 /ssl-certs/*"]
+#      volumeMounts:
+#        - name: traefik-nfs-pvc
+#          mountPath: /ssl-certs
+
+# Set Traefik as your default Ingress Controller, according to Kubernetes 1.19+ changes.
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+securityContext:
+  capabilities:
+    drop: [ALL]
+    add: [NET_BIND_SERVICE]
+  readOnlyRootFilesystem: true
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+
+certResolvers:
+   cloudflare:
+     email: nuno@some.com
+     dnsChallenge:
+       # also add the provider's required configuration under env
+       # or expand then from secrets/configmaps with envfrom
+       # cf. https://doc.traefik.io/traefik/https/acme/#providers
+       provider: cloudflare
+       # add futher options for the dns challenge as needed
+       # cf. https://doc.traefik.io/traefik/https/acme/#dnschallenge
+       delayBeforeCheck: 30
+       resolvers:
+         - 1.1.1.1
+         - 8.8.8.8
+     storage: /ssl-certs/acme-cloudflare.json
+service:
+  type: ClusterIP

@@ -1,0 +1,6 @@
+
+.idea/
+
+traefik/01_cf_secret.yaml
+
+traefik/values.yml
